@@ -1,0 +1,16 @@
+post/favorites/:dishid
+post to the users favories
+populating with dish inormation
+
+get /favorites
+get all favorties for user populating dish information and user information
+
+post/faviorites
+a body of arrays of favorites you can post multiple favorites
+again populate dish information.
+
+delete favorites/:dishid
+delete a certain favorite from a users's favaroites
+
+delete favorites
+deltes all favorites
