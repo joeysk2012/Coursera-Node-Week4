@@ -10,6 +10,7 @@ const usersRouter = require('./routes/users');
 const dishRouter = require('./routes/dishes');
 const promoRouter = require('./routes/promos');
 const leaderRouter = require('./routes/leaders');
+const favoriteRouter = require('./routes/favorites');
 var app = express();
 
 //Authentication
@@ -43,6 +44,7 @@ app.use('/users', usersRouter);
 app.use('/dishes', dishRouter);
 app.use('/promos', promoRouter);
 app.use('/leaders', leaderRouter);
+app.use('/favorites', favoriteRouter);
 
 
 

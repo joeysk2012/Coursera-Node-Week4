@@ -3,7 +3,7 @@ const bodyParser = require('body-parser');
 const mongoose = require('mongoose');
 const dishRouter = express.Router();
 const Dishes = require('../models/dishes');
-const authenticate = require('../authenticate');
+var authenticate = require('../authenticate');
 
 
 dishRouter.use(bodyParser.json());
@@ -12,20 +12,20 @@ dishRouter.route('/')
 .get((req,res,next) => {
     Dishes.find({})
     .populate('comments.author')
-    .then((favs) => {
+    .then((dishes) => {
         res.statusCode = 200;
         res.setHeader('Content-Type', 'application/json');
-        res.json(favs);
+        res.json(dishes);
     }, (err) => next(err))
     .catch((err) => next(err));
 })
-.post(authenticate.verifyUser, (req, res, next) => {
+.post(authenticate.verifyUser, authenticate.verifyAdmin, (req, res, next) => {
     Dishes.create(req.body)
-    .then((fav) => {
-        console.log('added favorties ', dish);
+    .then((dish) => {
+        console.log('Dish Created ', dish);
         res.statusCode = 200;
         res.setHeader('Content-Type', 'application/json');
-        res.json(fav);
+        res.json(dish);
     }, (err) => next(err))
     .catch((err) => next(err));
 })

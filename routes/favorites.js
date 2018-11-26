@@ -11,29 +11,43 @@ favoriteRouter.route('/')
 .get(authenticate.verifyUser, (req,res,next) => {
     Favorites.find({})
     .populate('user')
-    .then((favorites) => {
+    .populate('dishes')
+    .then((favs) => {
         res.statusCode = 200;
         res.setHeader('Content-Type', 'application/json');
-        res.json(dishes);
+        res.json(favs);
     }, (err) => next(err))
     .catch((err) => next(err));
 })
 .post(authenticate.verifyUser, (req, res, next) => {
-    Favorites.create(req.body)
-    .then((dish) => {
-        console.log('added to favorites ', dish);
+    Favorites.findOne({user: req.user._id})
+    .then((fav) => {
+        if(fav){
+            for(let i=0; i<req.body.length; i++){
+                if(!fav.dishes.includes(req.body[i]._id)){
+                    fav.dishes.push(req.body[i]._id);
+                    
+                }
+            }
+            fav.save();
+        }else{
+            Favorites.create({"user" : req.user._id, "dishes" : req.body});
+        }
+    })
+    .then((fav) => {
+        console.log('Favorites created', fav);
         res.statusCode = 200;
         res.setHeader('Content-Type', 'application/json');
-        res.json(dish);
+        res.json(fav);
     }, (err) => next(err))
     .catch((err) => next(err));
 })
-.put(authenticate.verifyUser, authenticate.verifyAdmin, (req, res, next) => {
+.put(authenticate.verifyUser, (req, res, next) => {
     res.statusCode = 403;
-    res.end('PUT operation not supported on /dishes');
+    res.end('PUT operation not supported on /favorites');
 })
-.delete(authenticate.verifyUser, authenticate.verifyAdmin, (req, res, next) => {
-    Dishes.remove({})
+.delete(authenticate.verifyUser, (req, res, next) => {
+    Favorites.remove({})
     .then((resp) => {
         res.statusCode = 200;
         res.setHeader('Content-Type', 'application/json');
@@ -42,208 +56,66 @@ favoriteRouter.route('/')
     .catch((err) => next(err));    
 });
 
-dishRouter.route('/:dishId')
+favoriteRouter.route('/:dishId')
 .get((req,res,next) => {
-    Dishes.findById(req.params.dishId)
-    .populate('comments.author')
-    .then((dish) => {
-        res.statusCode = 200;
-        res.setHeader('Content-Type', 'application/json');
-        res.json(dish);
-    }, (err) => next(err))
-    .catch((err) => next(err));
-})
-.post(authenticate.verifyUser, authenticate.verifyAdmin, (req, res, next) => {
     res.statusCode = 403;
-    res.end('POST operation not supported on /dishes/'+ req.params.dishId);
+    res.end('Get operation not supported on /favorites/' + req.params.dishId);
 })
-.put(authenticate.verifyUser, authenticate.verifyAdmin, (req, res, next) => {
-    Dishes.findByIdAndUpdate(req.params.dishId, {
-        $set: req.body
-    }, { new: true })
-    .then((dish) => {
+.post(authenticate.verifyUser,  (req, res, next) => {
+    Favorites.findOne({user: req.user._id})
+    .then((fav) => {
+        if(fav){
+            console.log(req.params.dishId)
+            let is_empty = fav.dishes.filter((item) => item["_id"] == req.params.dishId)
+            console.log(is_empty)
+            if(is_empty === undefined || is_empty.length == 0){
+                    console.log('creating')
+                    fav.dishes.push(req.params.dishId);
+                    fav.save();
+            }
+        }else{
+            Favorites.create({"user" : req.user._id, "dishes" : [req.params.dishId]});
+        }
+    })
+    .then((fav) => {
+        console.log('Favorites created', fav);
         res.statusCode = 200;
         res.setHeader('Content-Type', 'application/json');
-        res.json(dish);
+        res.json(fav);
     }, (err) => next(err))
     .catch((err) => next(err));
 })
-.delete(authenticate.verifyUser, authenticate.verifyAdmin, (req, res, next) => {
-    Dishes.findByIdAndRemove(req.params.dishId)
-    .then((resp) => {
-        res.statusCode = 200;
-        res.setHeader('Content-Type', 'application/json');
-        res.json(resp);
-    }, (err) => next(err))
-    .catch((err) => next(err));
-});
-
-
-//Modify comments on dishes (model inside model)
-
-dishRouter.route('/:dishId/comments')
-.get((req,res,next) => {
-    Dishes.findById(req.params.dishId)
-    .populate('comments.author')
-    .then((dish) => {
-        if (dish != null) {
-            res.statusCode = 200;
-            res.setHeader('Content-Type', 'application/json');
-            res.json(dish.comments);
-        }
-        else {
-            err = new Error('Dish ' + req.params.dishId + ' not found');
-            err.status = 404;
-            return next(err);
-        }
-    }, (err) => next(err))
-    .catch((err) => next(err));
-})
-.post(authenticate.verifyUser, (req, res, next) => {
-    Dishes.findById(req.params.dishId)
-    .then((dish) => {
-        if (dish != null) {
-            req.body.author = req.user._id;
-            dish.comments.push(req.body);
-            dish.save()
-            .then((dish) => {
-                Dishes.findById(dish._id)
-                .populate('comments.author')
-                .then((dish) => {
-                    res.statusCode = 200;
-                    res.setHeader('Content-Type', 'application/json');
-                    res.json(dish);
-                })            
-            }, (err) => next(err));
-        }
-        else {
-            err = new Error('Dish ' + req.params.dishId + ' not found');
-            err.status = 404;
-            return next(err);
-        }
-    }, (err) => next(err))
-    .catch((err) => next(err));
-})
-.put(authenticate.verifyUser, (req, res, next) => {
+.put(authenticate.verifyUser,  (req, res, next) => {
     res.statusCode = 403;
-    res.end('PUT operation not supported on /dishes/'
-        + req.params.dishId + '/comments');
+    res.end('PUT operation not supported on /favorites/'+ req.params.dishId);
 })
 .delete(authenticate.verifyUser, (req, res, next) => {
-    Dishes.findById(req.params.dishId)
-    .then((dish) => {
-        if (dish != null) {
-            for (var i = (dish.comments.length -1); i >= 0; i--) {
-                dish.comments.id(dish.comments[i]._id).remove();
-            }
-            dish.save()
-            .then((dish) => {
+    Favorites.findOne({user: req.user._id})
+    .then((fav) => {
+        if(fav){
+        if(fav.dishes.includes(req.params.dishId)){
+            fav.dishes = fav.dishes.filter(item => item._id !== req.params.dishId)
+            fav.save()
+            .then((fav) =>{
+                console.log('Favorite Delted', fav)
                 res.statusCode = 200;
                 res.setHeader('Content-Type', 'application/json');
-                res.json(dish);                
+                res.json(favorite);
             }, (err) => next(err));
-        }
-        else {
-            err = new Error('Dish ' + req.params.dishId + ' not found');
+        }else{
+            err = new Error('Favorite dish ' + req.params.dishId + ' not found');
             err.status = 404;
             return next(err);
         }
-    }, (err) => next(err))
-    .catch((err) => next(err));    
-});
-
-dishRouter.route('/:dishId/comments/:commentId')
-.get((req,res,next) => {
-    Dishes.findById(req.params.dishId)
-    .populate('comments.author')    
-    .then((dish) => {
-        if (dish != null && dish.comments.id(req.params.commentId) != null) {
-            res.statusCode = 200;
-            res.setHeader('Content-Type', 'application/json');
-            res.json(dish.comments.id(req.params.commentId));
-        }
-        else if (dish == null) {
-            err = new Error('Dish ' + req.params.dishId + ' not found');
-            err.status = 404;
-            return next(err);
-        }
-        else {
-            err = new Error('Comment ' + req.params.commentId + ' not found');
-            err.status = 404;
-            return next(err);            
-        }
-    }, (err) => next(err))
-    .catch((err) => next(err));
-})
-.post(authenticate.verifyUser, (req, res, next) => {
-    res.statusCode = 403;
-    res.end('POST operation not supported on /dishes/'+ req.params.dishId
-        + '/comments/' + req.params.commentId);
-})
-.put(authenticate.verifyUser, (req, res, next) => {
-    Dishes.findById(req.params.dishId)
-    .then((dish) => {
-        if (dish != null && dish.comments.id(req.params.commentId) != null) {
-            if (req.body.rating) {
-                dish.comments.id(req.params.commentId).rating = req.body.rating;
-            }
-            if (req.body.comment) {
-                dish.comments.id(req.params.commentId).comment = req.body.comment;                
-            }
-            dish.save()
-            .then((dish) => {
-                Dishes.findById(dish._id)
-                .populate('comments.author')
-                .then((dish) => {
-                    res.statusCode = 200;
-                    res.setHeader('Content-Type', 'application/json');
-                    res.json(dish);  
-                })              
-            }, (err) => next(err));
-        }
-        else if (dish == null) {
-            err = new Error('Dish ' + req.params.dishId + ' not found');
-            err.status = 404;
-            return next(err);
-        }
-        else {
-            err = new Error('Comment ' + req.params.commentId + ' not found');
-            err.status = 404;
-            return next(err);            
-        }
-    }, (err) => next(err))
-    .catch((err) => next(err));
-})
-.delete(authenticate.verifyUser, (req, res, next) => {
-    Dishes.findById(req.params.dishId)
-    .then((dish) => {
-        if (dish != null && dish.comments.id(req.params.commentId) != null) {
-
-            dish.comments.id(req.params.commentId).remove();
-            dish.save()
-            .then((dish) => {
-                Dishes.findById(dish._id)
-                .populate('comments.author')
-                .then((dish) => {
-                    res.statusCode = 200;
-                    res.setHeader('Content-Type', 'application/json');
-                    res.json(dish);  
-                })               
-            }, (err) => next(err));
-        }
-        else if (dish == null) {
-            err = new Error('Dish ' + req.params.dishId + ' not found');
-            err.status = 404;
-            return next(err);
-        }
-        else {
-            err = new Error('Comment ' + req.params.commentId + ' not found');
-            err.status = 404;
-            return next(err);            
-        }
-    }, (err) => next(err))
+    }else{
+        err = new Error('Favorites not found for user');
+        err.status = 404;
+        return next(err);
+    }
+    })
     .catch((err) => next(err));
 });
 
 
-module.exports = dishRouter;
+
+module.exports = favoriteRouter;
