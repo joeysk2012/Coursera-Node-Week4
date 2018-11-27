@@ -23,10 +23,12 @@ favoriteRouter.route('/')
     Favorites.findOne({user: req.user._id})
     .then((fav) => {
         if(fav){
-            for(let i=0; i<req.body.length; i++){
-                if(!fav.dishes.includes(req.body[i]._id)){
-                    fav.dishes.push(req.body[i]._id);
-                    
+            console.log(typeof(req.body[0]["_id"]))
+            console.log(typeof(fav.dishes[0]["_id"]))
+            for(let i=0; i < req.body.length; i++){
+                let is_empty = fav.dishes.filter((item) => item["_id"] == req.body[i]["_id"])
+                if(is_empty === undefined || is_empty.length == 0){
+                        fav.dishes.push(req.body[i]["_id"]);
                 }
             }
             fav.save();
@@ -93,29 +95,22 @@ favoriteRouter.route('/:dishId')
     Favorites.findOne({user: req.user._id})
     .then((fav) => {
         if(fav){
-        if(fav.dishes.includes(req.params.dishId)){
-            fav.dishes = fav.dishes.filter(item => item._id !== req.params.dishId)
+            fav.dishes = fav.dishes.filter(item => item["_id"] != req.params.dishId)
+            console.log("the filter is: ", fav.dishes)
             fav.save()
             .then((fav) =>{
-                console.log('Favorite Delted', fav)
+                console.log('Favorite Deleted', fav)
                 res.statusCode = 200;
                 res.setHeader('Content-Type', 'application/json');
-                res.json(favorite);
-            }, (err) => next(err));
+                res.json(fav);
+            });
         }else{
-            err = new Error('Favorite dish ' + req.params.dishId + ' not found');
+            err = new Error('Favorites not found for user');
             err.status = 404;
             return next(err);
         }
-    }else{
-        err = new Error('Favorites not found for user');
-        err.status = 404;
-        return next(err);
-    }
-    })
+    }, (err) => next(err))
     .catch((err) => next(err));
 });
-
-
 
 module.exports = favoriteRouter;
